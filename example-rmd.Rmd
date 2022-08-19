@@ -1,0 +1,190 @@
+---
+title: "Preterm Exercise"
+author: "Carole Voulgaris"
+date: '2022-08-16'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+The purpose of this RMarkdown file is demonstrate some introductory tidyverse 
+skills.
+
+Prior to running any of this code, you should start a new RStudio project. 
+
+Download the following from from Canvas (Pre-Term Workshop > R exercise):
+* This file (example-rmd.Rmd)
+* FY2022_cambridge_asssessor.csv
+* cambridge_parcels.geojson
+
+Save all three files to the project directory associated with the RStudio 
+project you just created. Open the RStudio project (not just the script).
+
+## Required packages
+
+This exercise uses the following packages:
+
+```{r, message=FALSE, results='hide'}
+library(tidyverse)
+library(sf)
+library(here)
+```
+
+## Load data
+
+### Load data from a csv file
+
+The following code will read in data from a csv file.
+
+```{r, results='hide', message=FALSE}
+parcel_data <- here("FY2022_cambridge_assessor.csv") %>%
+  read_csv()
+```
+
+The `here()` function will create a path to csv file in your project directory.
+The pipe (`%>%`) at the end of that line will take that path and enter it as 
+the first argument of the `read_csv()` function on the next line. The `read_csv()`
+function is aptly named. It reads a csv file and saves the contents to a tibble
+you've named at the start of this piped set of functions (`parcel_data`)
+
+### Load data from a geojson file
+
+To load data from a file format associated with spatial data, 
+use `st_read()` instead of `read_csv()`.
+
+```{r, results='hide', message=FALSE}
+parcel_boundaries <- here("cambridge_parcels.geojson") %>%
+  st_read()
+```
+
+## Join two datasets
+
+The `left_join()` function will combine the two tibbles based on a
+common variable (in this case, gisid), keeping (and possibly repeating) 
+rows in the "left" tibble (the one you mention first) and dropping
+any rows from the "right" tibble that aren't present in the the left one.
+
+```{r}
+parcel_boundaries_data <- parcel_boundaries %>%
+  left_join(parcel_data)
+```
+
+## Select columns
+
+The `select()` function lets you select the columns you want to keep.
+
+```{r}
+owners_values <- parcel_boundaries_data %>%
+  select(gisid, landarea, buildingvalue, landvalue, owner_name)
+```
+
+## Filter rows
+
+Maybe we only want to analyze the properties owned by Harvard.
+We can filter for these. 
+
+```{r}
+Harvard_parcels <- owners_values %>%
+  filter(owner_name == "PRESIDENT & FELLOWS OF HARVARD COLLEGE")
+```
+
+And we can filter further to remove duplicates.
+
+```{r}
+Harvard_unique <- Harvard_parcels %>%
+  filter(!duplicated(.))
+```
+
+## Calculate a new variable
+
+The mutate function will create a new variable. With math.
+
+```{r}
+# Calculate a new variable 
+Harvard_pct_value <- Harvard_unique %>%
+  mutate(pct_bldg = buildingvalue / (buildingvalue + landvalue))
+```
+
+## Better living with pipes
+
+We can actually combine all of the above into one long piped set
+of functions, so save us from having to clutter up our environment
+with all those intermediate tibbles.
+
+```{r}
+final_data <- parcel_boundaries %>%
+  left_join(parcel_data) %>%
+  select(gisid, landarea, buildingvalue, landvalue, owner_name) %>%
+  filter(owner_name == "PRESIDENT & FELLOWS OF HARVARD COLLEGE") %>%
+  filter(!duplicated(.)) %>%
+  mutate(pct_bldg = buildingvalue / (buildingvalue + landvalue))
+```
+
+## Plot some data
+
+### Scatter plot
+
+We can use ggplot to create a scatterplot of our data.
+
+```{r}
+scatter <- ggplot(final_data) +
+  geom_point(aes(x = landarea, y = landvalue)) 
+
+scatter
+```
+
+I'm trying to keep this all super simple, but I can't help myself
+These data are begging to be log-transformed.
+
+```{r}
+scatter_log <- scatter +
+  scale_x_continuous(trans = "log") +
+  scale_y_continuous(trans = "log")
+
+scatter_log
+```
+
+### Map
+
+We can also use ggplot to create a map.
+
+```{r}
+map <- ggplot(final_data) +
+  geom_sf(aes(fill = landvalue)) +
+  scale_fill_continuous(trans = "log")
+
+map
+```
+
+## Save some files
+
+### Datasets
+
+You can save your dataset as a csv.
+
+```{r}
+write_csv(final_data, "harvard_parcels.csv")
+```
+
+Or as a geojson.
+
+```{r}
+st_write(final_data, "harvard_parcels.geojson")
+```
+
+### Plots
+
+You can also use `ggsave()` to save plots in a variety of different 
+image formats (including PDFs).
+
+```{r}
+ggsave("scatter.pdf", plot = scatter_log)
+
+ggsave("map.png", plot = map)
+```
+
+

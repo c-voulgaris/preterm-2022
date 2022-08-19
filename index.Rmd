@@ -1,0 +1,105 @@
+---
+title: "Preterm Exercise"
+author: "Carole Voulgaris"
+date: '2022-08-16'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+The purpose of this exercise is to give you some practice with the RStudio
+interface and a few common tidyverse functions.
+
+## Required packages
+This exercise uses the following packages:
+
+```{r, message=FALSE, results='hide'}
+library(tidyverse)
+library(sf)
+library(here)
+```
+
+## Load data from a file
+
+Start an RStudio project.
+
+Download the csv file called "FY2022_cambridge_asssessor.csv" from Canvas 
+(Pre-Term Workshop > R exercise) and save it to the project directory associated
+with the RStudio project you just created.
+
+Create a new R script in your RStudio project. In the first few lines of the 
+script, load the required packages. Somewhere below that, add the following 
+lines to your script:
+
+```{r, results='hide', message=FALSE}
+parcel_data <- here("FY2022_cambridge_assessor.csv") %>%
+  read_csv()
+```
+
+The `here()` function will create a path to csv file in your project directory.
+The pipe (`%>%`) at the end of that line will take that path and enter it as 
+the first argument of the `read_csv()` function on the next line. The `read_csv()`
+function is aptly named. It reads a csv file and saves the contents to a tibble
+you've named at the start of this piped set of functions (`parcel_data`)
+
+## Select columns
+
+You should see the `parcel_data` tibble listed on your environment
+tab now. It has 29,542 rows (observations) and 63 columns (variables).
+Not all of these variables are interesting or interpretable for us. Let's
+try selecting just the ones we want to keep.
+
+```{r}
+owners_values <- parcel_data %>%
+  select(gisid, landarea, buildingvalue, landvalue, owner_name)
+```
+
+Now you should have a new tibble in your environment called `owners_values`.
+It has all the same rows as parcel_data, but only includes the five 
+variables you selected using the `select` function.
+
+## Filter rows
+
+Maybe we only want to analyze the properties owned by Harvard.
+We can filter for these. 
+
+In the code below, the `filter()` function, will keep only the 
+rows that meet the a specified condition. The double equal sign (`==`)
+means you want to compare the two values (rather than setting one 
+equal to the other, which is what a single equal sign would suggest).
+
+```{r}
+Harvard_parcels <- owners_values %>%
+  filter(owner_name == "PRESIDENT & FELLOWS OF HARVARD COLLEGE")
+```
+
+That leaves 372 Harvard-owned properties. Glancing through the dataset, some
+of these appear to be duplicates. We can remove those with the `filter()` 
+function as well.
+
+```{r}
+Harvard_unique <- Harvard_parcels %>%
+  filter(!duplicated(.))
+```
+
+A couple of translations in the above code:
+
+* `!` means "not"
+* `.` references the object that's getting piped in from the 
+previous line
+
+## Calculate a new variable
+
+
+## Join two datasets
+
+
+## Plot some data
+
+
+## Save a file
+
+
